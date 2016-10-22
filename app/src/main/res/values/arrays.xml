@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="recommend_item_long_click_choice">
+        <item>置顶</item>
+        <item>书籍详情</item>
+        <item>移入养肥区</item>
+        <item>缓存全本</item>
+        <item>删除</item>
+        <item>批量管理</item>
+    </string-array>
+
+    <string-array name="my_book_list_item_long_click_choice">
+        <item>删除</item>
+    </string-array>
+
+    <string-array name="setting_dialog_choice">
+        <item>按更新时间</item>
+        <item>按最近阅读</item>
+    </string-array>
+</resources>

@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+                xmlns:tools="http://schemas.android.com/tools"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/touch_bg">
+
+    <ImageView
+        android:id="@+id/ivRecommendCover"
+        android:layout_width="40dp"
+        android:layout_height="54dp"
+        android:layout_alignParentLeft="true"
+        android:layout_centerVertical="true"
+        android:layout_marginBottom="10dp"
+        android:layout_marginLeft="15dp"
+        android:layout_marginTop="10dp"
+        android:src="@mipmap/cover_default"
+        android:scaleType="centerCrop"/>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_centerVertical="true"
+        android:layout_margin="10dp"
+        android:layout_toRightOf="@+id/ivRecommendCover"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/tvRecommendTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="8dp"
+            android:ellipsize="end"
+            android:maxEms="15"
+            android:singleLine="true"
+            android:textColor="@color/common_h1"
+            android:textSize="16sp"
+            tools:text="逆鳞"/>
+
+        <TextView
+            android:id="@+id/tvRecommendShort"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="8dp"
+            android:layout_marginTop="3dp"
+            android:ellipsize="end"
+            android:maxEms="15"
+            android:singleLine="true"
+            android:textColor="@color/common_h2"
+            tools:text="第四百六十五章、打蛇七寸！"/>
+    </LinearLayout>
+
+    <ImageView
+        android:id="@+id/ivTopLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentRight="true"
+        android:src="@mipmap/label_book_top"
+        android:visibility="gone"
+        tools:visibility="visible"/>
+
+    <CheckBox
+        android:id="@+id/ckBoxSelect"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentRight="true"
+        android:layout_centerVertical="true"
+        android:layout_marginRight="15dp"
+        android:visibility="gone"
+        tools:visibility="visible"/>
+
+    <!--<com.readystatesoftware.viewbadger.BadgeView
+        android:layout_width="3dp"
+        android:layout_height="3dp"
+        android:layout_alignParentRight="true"
+        android:layout_centerVertical="true"
+        android:layout_marginRight="15dp"
+        android:visibility="gone"
+        tools:visibility="visible"/>-->
+
+</RelativeLayout>
