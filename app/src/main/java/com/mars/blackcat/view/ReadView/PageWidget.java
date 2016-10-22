@@ -12,33 +12,21 @@ import android.graphics.PointF;
 import android.graphics.Region;
 import android.graphics.drawable.GradientDrawable;
 import android.view.MotionEvent;
-import android.view.View;
-import android.widget.Scroller;
 
 import com.mars.blackcat.bean.BookToc;
 import com.mars.blackcat.manager.SettingManager;
 import com.mars.blackcat.manager.ThemeManager;
-import com.mars.blackcat.utils.LogUtils;
-import com.mars.blackcat.utils.ScreenUtils;
 import com.mars.blackcat.utils.ToastUtils;
 
 import java.util.List;
 
-public class PageWidget extends View {
+public class PageWidget extends com.mars.blackcat.view.ReadView.BaseReadView {
 
-    private int mScreenWidth; // 屏幕宽
-    private int mScreenHeight; // 屏幕高
     private int mCornerX = 1; // 拖拽点对应的页脚
     private int mCornerY = 1;
     private Path mPath0;
     private Path mPath1;
 
-    Bitmap mCurPageBitmap = null; // 当前页
-    Bitmap mNextPageBitmap = null;
-    private Canvas mCurrentPageCanvas, mNextPageCanvas;
-    PageFactory pagefactory = null;
-
-    PointF mTouch = new PointF(); // 拖拽点
     PointF mBezierStart1 = new PointF(); // 贝塞尔曲线起始点
     PointF mBezierControl1 = new PointF(); // 贝塞尔曲线控制点
     PointF mBeziervertex1 = new PointF(); // 贝塞尔曲线顶点
@@ -73,23 +61,16 @@ public class PageWidget extends View {
     GradientDrawable mFrontShadowDrawableVRL;
 
     Paint mPaint;
-    Scroller mScroller;
+
 
     private float actiondownX, actiondownY;
 
-    private OnReadStateChangeListener listener;
-    private String bookId;
-    public boolean isPrepared = false;
-
-    public PageWidget(Context context, String bookId, List<BookToc.mixToc.Chapters> chaptersList,
+    public PageWidget(Context context, String bookId,
+                      List<BookToc.mixToc.Chapters> chaptersList,
                       OnReadStateChangeListener listener) {
-        super(context);
-        this.listener = listener;
-        this.bookId = bookId;
+        super(context, bookId, chaptersList, listener);
         mPath0 = new Path();
         mPath1 = new Path();
-        mScreenWidth = ScreenUtils.getScreenWidth();
-        mScreenHeight = ScreenUtils.getScreenHeight();
         mMaxLength = (float) Math.hypot(mScreenWidth, mScreenHeight);
         mPaint = new Paint();
         mPaint.setStyle(Paint.Style.FILL);
@@ -101,45 +82,16 @@ public class PageWidget extends View {
         cm.set(array);
         mColorMatrixFilter = new ColorMatrixColorFilter(cm);
         mMatrix = new Matrix();
-        mScroller = new Scroller(getContext());
 
         mTouch.x = 0.01f; // 不让x,y为0,否则在点计算时会有问题
         mTouch.y = 0.01f;
-
-        mCurPageBitmap = Bitmap.createBitmap(mScreenWidth, mScreenHeight, Bitmap.Config.ARGB_8888);
-        mNextPageBitmap = Bitmap.createBitmap(mScreenWidth, mScreenHeight, Bitmap.Config.ARGB_8888);
-        mCurrentPageCanvas = new Canvas(mCurPageBitmap);
-        mNextPageCanvas = new Canvas(mNextPageBitmap);
-        pagefactory = new PageFactory(getContext(), bookId, chaptersList);
-    }
-
-    public synchronized void init(int theme) {
-        if (!isPrepared) {
-
-            pagefactory.setOnReadStateChangeListener(listener);
-            try {
-                pagefactory.setBgBitmap(ThemeManager.getThemeDrawable(theme));
-                // 自动跳转到上次阅读位置
-                int pos[] = SettingManager.getInstance().getReadProgress(bookId);
-                int ret = pagefactory.openBook(pos[0], new int[]{pos[1], pos[2]});
-                LogUtils.i("上次阅读位置：chapter=" + pos[0] + " startPos=" + pos[1] + " endPos=" + pos[2]);
-                if (ret == 0) {
-                    listener.onLoadChapterFailure(pos[0]);
-                    return;
-                }
-                pagefactory.onDraw(mCurrentPageCanvas);
-                postInvalidate();
-            } catch (Exception e) {
-            }
-            isPrepared = true;
-        }
     }
 
     /**
      * 计算拖拽点对应的拖拽脚
      *
-     * @param x
-     * @param y
+     * @param x 触摸点x坐标
+     * @param y 触摸点y坐标
      */
     public void calcCornerXY(float x, float y) {
         if (x <= mScreenWidth / 2)
@@ -157,34 +109,6 @@ public class PageWidget extends View {
             mIsRTandLB = false;
     }
 
-    public boolean doTouchEvent(MotionEvent event) {
-
-        if (event.getAction() == MotionEvent.ACTION_MOVE) {
-            mTouch.x = event.getX();
-            mTouch.y = event.getY();
-            this.postInvalidate();
-        }
-
-        if (event.getAction() == MotionEvent.ACTION_DOWN) {
-            mTouch.x = event.getX();
-            mTouch.y = event.getY();
-            actiondownX = event.getX();
-            actiondownY = event.getY();
-        }
-        if (event.getAction() == MotionEvent.ACTION_UP) {
-            startAnimation(1000);
-            this.postInvalidate();
-        }
-        if (event.getAction() == MotionEvent.ACTION_MOVE
-                && event.getMetaState() == 1) {
-            mTouch.x = event.getX();
-            mTouch.y = event.getY();
-            startAnimation(1000);
-            this.postInvalidate();
-        }
-        return true;
-    }
-
     /**
      * 求解直线P1P2和直线P3P4的交点坐标
      */
@@ -199,7 +123,8 @@ public class PageWidget extends View {
         return CrossP;
     }
 
-    private void calcPoints() {
+    @Override
+    protected void calcPoints() {
         mMiddleX = (mTouch.x + mCornerX) / 2;
         mMiddleY = (mTouch.y + mCornerY) / 2;
         mBezierControl1.x = mMiddleX - (mCornerY - mMiddleY) * (mCornerY - mMiddleY) / (mCornerX - mMiddleX);
@@ -269,7 +194,8 @@ public class PageWidget extends View {
         mBeziervertex2.y = (2 * mBezierControl2.y + mBezierStart2.y + mBezierEnd2.y) / 4;
     }
 
-    private void drawCurrentPageArea(Canvas canvas, Bitmap bitmap, Path path) {
+    @Override
+    protected void drawCurrentPageArea(Canvas canvas) {
         mPath0.reset();
         mPath0.moveTo(mBezierStart1.x, mBezierStart1.y);
         mPath0.quadTo(mBezierControl1.x, mBezierControl1.y, mBezierEnd1.x, mBezierEnd1.y);
@@ -280,8 +206,8 @@ public class PageWidget extends View {
         mPath0.close();
 
         canvas.save();
-        canvas.clipPath(path, Region.Op.XOR);
-        canvas.drawBitmap(bitmap, 0, 0, null);
+        canvas.clipPath(mPath0, Region.Op.XOR);
+        canvas.drawBitmap(mCurPageBitmap, 0, 0, null);
         try {
             canvas.restore();
         } catch (Exception e) {
@@ -289,7 +215,8 @@ public class PageWidget extends View {
         }
     }
 
-    private void drawNextPageAreaAndShadow(Canvas canvas, Bitmap bitmap) {
+    @Override
+    protected void drawNextPageAreaAndShadow(Canvas canvas) {
         mPath1.reset();
         mPath1.moveTo(mBezierStart1.x, mBezierStart1.y);
         mPath1.lineTo(mBeziervertex1.x, mBeziervertex1.y);
@@ -319,7 +246,7 @@ public class PageWidget extends View {
         }
 
 
-        canvas.drawBitmap(bitmap, 0, 0, null);
+        canvas.drawBitmap(mNextPageBitmap, 0, 0, null);
         canvas.rotate(mDegrees, mBezierStart1.x, mBezierStart1.y);
         mBackShadowDrawable.setBounds(leftx, (int) mBezierStart1.y,
                 rightx, (int) (mMaxLength + mBezierStart1.y));//左上及右下角的xy坐标值,构成一个矩形
@@ -330,16 +257,6 @@ public class PageWidget extends View {
     public void setBitmaps(Bitmap bm1, Bitmap bm2) {
         mCurPageBitmap = bm1;
         mNextPageBitmap = bm2;
-    }
-
-    @Override
-    protected void onDraw(Canvas canvas) {
-        //canvas.drawColor(0xFFAAAAAA);
-        calcPoints();
-        drawCurrentPageArea(canvas, mCurPageBitmap, mPath0);
-        drawNextPageAreaAndShadow(canvas, mNextPageBitmap);
-        drawCurrentPageShadow(canvas);
-        drawCurrentBackArea(canvas, mCurPageBitmap);
     }
 
     /**
@@ -472,13 +389,8 @@ public class PageWidget extends View {
         canvas.restore();
     }
 
-    /**
-     * 绘制翻起页背面
-     *
-     * @param canvas
-     * @param bitmap
-     */
-    private void drawCurrentBackArea(Canvas canvas, Bitmap bitmap) {
+    @Override
+    protected void drawCurrentBackArea(Canvas canvas) {
         int i = (int) (mBezierStart1.x + mBezierControl1.x) / 2;
         float f1 = Math.abs(i - mBezierControl1.x);
         int i1 = (int) (mBezierStart2.y + mBezierControl2.y) / 2;
@@ -510,7 +422,6 @@ public class PageWidget extends View {
         } catch (Exception e) {
         }
 
-
         mPaint.setColorFilter(mColorMatrixFilter);
 
         float dis = (float) Math.hypot(mCornerX - mBezierControl1.x,
@@ -525,7 +436,7 @@ public class PageWidget extends View {
         mMatrix.setValues(mMatrixArray);
         mMatrix.preTranslate(-mBezierControl1.x, -mBezierControl1.y);
         mMatrix.postTranslate(mBezierControl1.x, mBezierControl1.y);
-        canvas.drawBitmap(bitmap, mMatrix, mPaint);
+        canvas.drawBitmap(mCurPageBitmap, mMatrix, mPaint);
         // canvas.drawBitmap(bitmap, mMatrix, null);
         mPaint.setColorFilter(null);
         canvas.rotate(mDegrees, mBezierStart1.x, mBezierStart1.y);
@@ -545,15 +456,12 @@ public class PageWidget extends View {
             mTouch.y = y;
             postInvalidate();
         }
-
     }
 
     /**
      * 开启翻页动画
-     *
-     * @param delayMillis
      */
-    private void startAnimation(int delayMillis) {
+    private void startAnimation() {
         int dx, dy;
         if (mCornerX > 0) {
             dx = -(int) (mScreenWidth + mTouch.x);
@@ -565,9 +473,12 @@ public class PageWidget extends View {
         } else {
             dy = (int) (1 - mTouch.y); // 防止mTouch.y最终变为0
         }
-        mScroller.startScroll((int) mTouch.x, (int) mTouch.y, dx, dy, delayMillis);
+        mScroller.startScroll((int) mTouch.x, (int) mTouch.y, dx, dy, 700);
     }
 
+    /**
+     * 停止翻页动画（滑到一半调用停止的话  翻页效果会卡住 可调用#restoreAnimation 还原效果）
+     */
     public void abortAnimation() {
         if (!mScroller.isFinished()) {
             mScroller.abortAnimation();
@@ -575,126 +486,115 @@ public class PageWidget extends View {
     }
 
     /**
-     * 是否能够拖动过去
-     *
-     * @return
+     * 还原翻页
      */
-    public boolean canDragOver() {
-        if (mTouchToCornerDis > mScreenWidth / 10)
-            return true;
-        return false;
-    }
-
-    /**
-     * 是否从左边翻向右边
-     *
-     * @return
-     */
-    public String DragToRight() {
-        if (actiondownX > mScreenWidth / 3.0 && actiondownX < (mScreenWidth * 2.0 / 3.0)) {
-            return "popview";
-        } else if (actiondownX < mScreenWidth / 3.0) {
-            return "right";
-        } else if (actiondownX > mScreenWidth * 2.0 / 3) {
-            return "left";
+    public void restoreAnimation() {
+        int dx, dy;
+        if (mCornerX > 0) {
+            dx = (int) (mScreenWidth - mTouch.x);
+        } else {
+            dx = (int) (-mTouch.x);
         }
-        return null;
+        if (mCornerY > 0) {
+            dy = (int) (mScreenHeight - mTouch.y);
+        } else {
+            dy = (int) (1 - mTouch.y);
+        }
+        mScroller.startScroll((int) mTouch.x, (int) mTouch.y, dx, dy, 300);
     }
 
+    private int dx, dy;
+    private long et = 0;
+    private boolean cancel = false;
 
-    public boolean right() {
-        if (mCornerX > -4)
-            return false;
+    @Override
+    public boolean onTouchEvent(MotionEvent e) {
+        switch (e.getAction()) {
+            case MotionEvent.ACTION_DOWN:
+                et = System.currentTimeMillis();
+                dx = (int) e.getX();
+                dy = (int) e.getY();
+                mTouch.x = dx;
+                mTouch.y = dy;
+                actiondownX = dx;
+                actiondownY = dy;
+                if (actiondownX >= mScreenWidth / 3 && actiondownX <= mScreenWidth * 2 / 3
+                        && actiondownY >= mScreenHeight / 3 && actiondownY <= mScreenHeight * 2 / 3) {
+                    listener.onCenterClick();
+                    return false;//停止向下分发事件
+                }
+                calcCornerXY(actiondownX, actiondownY);
+                pagefactory.onDraw(mCurrentPageCanvas);
+                if (actiondownX < mScreenWidth / 2) {// 从左翻
+                    if (!pagefactory.prePage()) {
+                        ToastUtils.showSingleToast("没有上一页啦");
+                        return false;
+                    }
+                    abortAnimation();
+                    pagefactory.onDraw(mNextPageCanvas);
+                } else if (actiondownX >= mScreenWidth / 2) {// 从右翻
+                    if (!pagefactory.nextPage()) {
+                        ToastUtils.showSingleToast("没有下一页啦");
+                        return false;
+                    }
+                    abortAnimation();
+                    pagefactory.onDraw(mNextPageCanvas);
+                }
+                listener.onFlip();
+                setBitmaps(mCurPageBitmap, mNextPageBitmap);
+                break;
+            case MotionEvent.ACTION_MOVE:
+                int mx = (int) e.getX();
+                int my = (int) e.getY();
+                if ((actiondownX < mScreenWidth / 2 && mx < mTouch.x) || (actiondownX > mScreenWidth / 2 && mx > mTouch.x)) {
+                    cancel = true;
+                } else {
+                    cancel = false;
+                }
+                mTouch.x = mx;
+                mTouch.y = my;
+                this.postInvalidate();
+                break;
+            case MotionEvent.ACTION_UP:
+
+                long t = System.currentTimeMillis();
+                int ux = (int) e.getX();
+                int uy = (int) e.getY();
+
+                if ((Math.abs(ux - dx) < 10) && (Math.abs(uy - dy) < 10)) {
+                    if ((t - et < 1000)) { // 单击
+                        startAnimation();
+                    } else { // 长按
+                        pagefactory.cancelPage();
+                        restoreAnimation();
+                    }
+                    postInvalidate();
+                    return true;
+                }
+                if (cancel) {
+                    pagefactory.cancelPage();
+                    restoreAnimation();
+                    postInvalidate();
+                } else {
+                    startAnimation();
+                    postInvalidate();
+                }
+                cancel = false;
+                break;
+            case MotionEvent.ACTION_CANCEL:
+                cancel = false;
+                break;
+            default:
+                break;
+        }
         return true;
     }
 
     @Override
-    public boolean onTouchEvent(MotionEvent e) {
-        if (e.getAction() == MotionEvent.ACTION_DOWN) {
-            int x = (int) e.getX();
-            int y = (int) e.getY();
-            if (x >= mScreenWidth / 3 && x <= mScreenWidth * 2 / 3
-                    && y >= mScreenHeight / 3 && y <= mScreenHeight * 2 / 3) {
-                listener.onCenterClick();
-                return false;//停止向下分发事件
-            }
-            abortAnimation();
-            calcCornerXY(e.getX(), e.getY());
-            pagefactory.onDraw(mCurrentPageCanvas);
-            if (x < mScreenWidth / 2) {// 从左翻
-                if (!pagefactory.prePage()) {
-                    ToastUtils.showSingleToast("没有上一页啦");
-                    return false;
-                }
-                pagefactory.onDraw(mNextPageCanvas);
-            } else if (x >= mScreenWidth / 2) {// 从右翻
-                if (!pagefactory.nextPage()) {
-                    ToastUtils.showSingleToast("没有下一页啦");
-                    return false;
-                }
-                pagefactory.onDraw(mNextPageCanvas);
-            }
-            listener.onFlip();
-            setBitmaps(mCurPageBitmap, mNextPageBitmap);
-        }
-        boolean ret = doTouchEvent(e);
-        return ret;
-    }
-
-    public void jumpToChapter(int chapter) {
-        abortAnimation();
-        pagefactory.openBook(chapter, new int[]{0, 0});
-        pagefactory.onDraw(mCurrentPageCanvas);
-        pagefactory.onDraw(mNextPageCanvas);
-        postInvalidate();
-    }
-
-    public void nextPage() {
-        if (!pagefactory.nextPage()) {
-            ToastUtils.showSingleToast("没有下一页啦");
-            return;
-        }
-        if (isPrepared) {
-            pagefactory.onDraw(mCurrentPageCanvas);
-            pagefactory.onDraw(mNextPageCanvas);
-            postInvalidate();
-        }
-    }
-
-    public void prePage() {
-        if (!pagefactory.prePage()) {
-            ToastUtils.showSingleToast("没有上一页啦");
-            return;
-        }
-        if (isPrepared) {
-            pagefactory.onDraw(mCurrentPageCanvas);
-            pagefactory.onDraw(mNextPageCanvas);
-            postInvalidate();
-        }
-    }
-
-    public synchronized void setFontSize(final int fontSizePx) {
-        pagefactory.setTextFont(fontSizePx);
-        if (isPrepared) {
-            abortAnimation();
-            pagefactory.onDraw(mCurrentPageCanvas);
-            pagefactory.onDraw(mNextPageCanvas);
-            SettingManager.getInstance().saveFontSize(bookId, fontSizePx);
-            postInvalidate();
-        }
-    }
-
-    public synchronized void setTextColor(int textColor,int titleColor) {
-        pagefactory.setTextColor(textColor,titleColor);
-        if (isPrepared) {
-            abortAnimation();
-            pagefactory.onDraw(mCurrentPageCanvas);
-            pagefactory.onDraw(mNextPageCanvas);
-            postInvalidate();
-        }
-    }
-
     public synchronized void setTheme(int theme) {
+        mTouch.x = 0.1f;
+        mTouch.y = 0.1f;
+        calcCornerXY(mTouch.x, mTouch.y);
         Bitmap bg = ThemeManager.getThemeDrawable(theme);
         if (bg != null) {
             pagefactory.setBgBitmap(bg);
@@ -709,15 +609,11 @@ public class PageWidget extends View {
         }
     }
 
-    public void setBattery(int battery) {
-        pagefactory.setBattery(battery);
-        if (isPrepared) {
-            pagefactory.onDraw(mCurrentPageCanvas);
-            postInvalidate();
-        }
-    }
-
-    public void setTime(String time) {
-        pagefactory.setTime(time);
+    @Override
+    public void jumpToChapter(int chapter) {
+        mTouch.x = 0.1f;
+        mTouch.y = 0.1f;
+        calcCornerXY(mTouch.x, mTouch.y);
+        super.jumpToChapter(chapter);
     }
 }
