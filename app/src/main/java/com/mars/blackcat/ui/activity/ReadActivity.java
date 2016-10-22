@@ -57,8 +57,8 @@ import com.mars.blackcat.utils.LogUtils;
 import com.mars.blackcat.utils.ScreenUtils;
 import com.mars.blackcat.utils.SharedPreferencesUtil;
 import com.mars.blackcat.utils.ToastUtils;
-import com.mars.blackcat.view.readview.OnReadStateChangeListener;
-import com.mars.blackcat.view.readview.PageWidget;
+import com.mars.blackcat.view.ReadView.OnReadStateChangeListener;
+import com.mars.blackcat.view.ReadView.PageWidget;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
